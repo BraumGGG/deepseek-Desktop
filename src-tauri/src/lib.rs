@@ -15,6 +15,7 @@ use tauri::{
     tray::{TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, RunEvent, State, WindowEvent,
 };
+use tauri::Url;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -205,6 +206,36 @@ fn restart_harness(app: AppHandle, state: State<AppState>) -> Result<String, Str
     boot_url(app, state)
 }
 
+fn restart_from_tray(app: AppHandle) {
+    thread::spawn(move || {
+        let state = app.state::<AppState>();
+        stop_harness(&state);
+        let Ok((url, log_path, port)) = start_harness(&app, &state) else { return };
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_secs(120) {
+            if TcpStream::connect_timeout(
+                &format!("127.0.0.1:{port}").parse().unwrap(),
+                Duration::from_millis(300),
+            ).is_ok() {
+                if let Some(mut window) = app.get_webview_window("main") {
+                    let _ = window.navigate(Url::parse(&url).unwrap());
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+                return;
+            }
+            if let Ok(mut guard) = state.harness.lock() {
+                if let Some(child) = guard.as_mut() {
+                    if child.try_wait().ok().flatten().is_some() { break; }
+                }
+            }
+            thread::sleep(Duration::from_millis(200));
+        }
+        stop_harness(&state);
+        let _ = app.emit("harness-restart-failed", format!("Harness 重启失败，日志：{}", log_path.display()));
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "windows")]
@@ -238,12 +269,7 @@ pub fn run() {
                         }
                     }
                     "restart" => {
-                        let _ = app.emit("restart-harness", ());
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
-                        }
+                        restart_from_tray(app.clone());
                     }
                     "logs" => {
                         if let Ok(path) = app.path().app_data_dir() {
