@@ -17,6 +17,8 @@ use tauri::{
     AppHandle, Manager, RunEvent, State, WindowEvent,
 };
 use tauri::Url;
+use tauri::PhysicalPosition;
+use tauri::PhysicalSize;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -63,6 +65,35 @@ fn runtime_root(app: &AppHandle) -> PathBuf {
     app.path()
         .resource_dir()
         .unwrap_or_else(|_| env::current_exe().unwrap().parent().unwrap().to_path_buf())
+}
+
+fn window_state_path(app: &AppHandle) -> Option<PathBuf> {
+    app.path().app_data_dir().ok().map(|dir| dir.join("window-state.txt"))
+}
+
+fn restore_window_state(app: &AppHandle) {
+    let Some(path) = window_state_path(app) else { return };
+    let Ok(contents) = read_to_string(path) else {
+        if let Some(window) = app.get_webview_window("main") { let _ = window.center(); }
+        return;
+    };
+    let values: Vec<i32> = contents.split_whitespace().filter_map(|v| v.parse().ok()).collect();
+    if values.len() != 4 || values[2] < 900 || values[3] < 600 {
+        if let Some(window) = app.get_webview_window("main") { let _ = window.center(); }
+        return;
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_size(PhysicalSize::new(values[2] as u32, values[3] as u32));
+        let _ = window.set_position(PhysicalPosition::new(values[0], values[1]));
+    }
+}
+
+fn save_window_state(app: &AppHandle) {
+    let Some(path) = window_state_path(app) else { return; };
+    let Some(window) = app.get_webview_window("main") else { return; };
+    let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) else { return; };
+    if let Some(parent) = path.parent() { let _ = create_dir_all(parent); }
+    let _ = std::fs::write(path, format!("{} {} {} {}\n", position.x, position.y, size.width, size.height));
 }
 
 fn resolve_resource(root: &Path, name: &str) -> PathBuf {
@@ -274,6 +305,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![boot_url, restart_harness])
         .setup(|app| {
+            restore_window_state(&app.handle());
             let show = MenuItem::with_id(app, "show", "打开主界面", true, None::<&str>)?;
             let restart = MenuItem::with_id(app, "restart", "重启 Harness 服务", true, None::<&str>)?;
             let logs = MenuItem::with_id(app, "logs", "打开日志目录", true, None::<&str>)?;
@@ -337,6 +369,9 @@ pub fn run() {
                     let _ = window.hide();
                 }
             }
+            RunEvent::WindowEvent { label, event: WindowEvent::Moved(_) | WindowEvent::Resized(_), .. }
+                if label == "main" => save_window_state(app),
+            RunEvent::ExitRequested { .. } => save_window_state(app),
             RunEvent::Exit => stop_harness(&app.state::<AppState>()),
             _ => {}
         });
