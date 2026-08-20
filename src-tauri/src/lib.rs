@@ -19,6 +19,10 @@ use tauri::{
 use std::os::windows::process::CommandExt;
 
 #[cfg(target_os = "windows")]
+const DETACHED_PROCESS: u32 = 0x00000008;
+#[cfg(target_os = "windows")]
+const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+#[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 struct AppState {
@@ -112,9 +116,10 @@ fn start_harness(
         .env("DSH_DESKTOP", "1")
         .current_dir(harness)
         .stdout(Stdio::from(log))
-        .stderr(Stdio::from(err_log));
+        .stderr(Stdio::from(err_log))
+        .stdin(Stdio::null());
     #[cfg(target_os = "windows")]
-    command.creation_flags(CREATE_NO_WINDOW);
+    command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
     let child = command
         .spawn()
         .map_err(|e| format!("启动 Harness 失败: {e}"))?;
