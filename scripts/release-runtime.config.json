@@ -1,0 +1,17 @@
+{
+  "baseRuntime": "harness-dist",
+  "knownGoodRuntime": "src-tauri/resources/harness-dist",
+  "output": "release-staging/harness-dist",
+  "maxFiles": 20000,
+  "excludeNames": [
+    ".git",
+    ".github",
+    ".pnpm",
+    "node_modules",
+    "coverage",
+    "test",
+    "tests",
+    "__tests__"
+  ],
+  "excludeExtensions": [".map", ".tsbuildinfo"]
+}

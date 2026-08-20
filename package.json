@@ -1,0 +1,17 @@
+{
+  "name": "deepseek-harness-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "prepare:runtime": "node scripts/prepare-runtime.mjs",
+    "release:runtime": "node scripts/build-release-runtime.mjs",
+    "verify:runtime": "node scripts/verify-release-runtime.mjs --node runtime/node.exe --runtime release-staging/harness-dist --timeout 120000",
+    "release:resources": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-tauri-resources.ps1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  }
+}

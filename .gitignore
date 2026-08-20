@@ -1,0 +1,43 @@
+# Dependencies and local caches
+node_modules/
+**/node_modules/
+.pnpm-store/
+target/
+**/target/
+
+# Generated bundled runtimes and installers
+runtime/
+harness/
+harness-dist/
+harness-flat/
+desktop-runtime2/
+portable-final/
+portable-release/
+release-staging/
+install-test/
+src-tauri/resources/
+src-tauri/resources.next/
+src-tauri/resources.previous/
+src-tauri/gen/
+
+# Upstream source/build downloads
+upstream-source/
+upstream-harness/
+package/
+*.tgz
+*.zip
+
+# Local diagnostics and generated test output
+*.err
+*.out
+*.log
+closure-*.txt
+count.txt
+resource-test*
+startup*.log
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
