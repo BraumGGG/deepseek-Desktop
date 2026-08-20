@@ -15,6 +15,7 @@ portable-final/
 portable-release/
 release-staging/
 install-test/
+backups/
 src-tauri/resources/
 src-tauri/resources.next/
 src-tauri/resources.previous/
