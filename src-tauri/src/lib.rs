@@ -10,6 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::{
+    Emitter,
     menu::{MenuBuilder, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, RunEvent, State, WindowEvent,
@@ -198,6 +199,12 @@ fn boot_url(app: AppHandle, state: State<AppState>) -> Result<String, String> {
     ))
 }
 
+#[tauri::command]
+fn restart_harness(app: AppHandle, state: State<AppState>) -> Result<String, String> {
+    stop_harness(&state);
+    boot_url(app, state)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "windows")]
@@ -208,13 +215,14 @@ pub fn run() {
             harness: Mutex::new(None),
             quitting: AtomicBool::new(false),
         })
-        .invoke_handler(tauri::generate_handler![boot_url])
+        .invoke_handler(tauri::generate_handler![boot_url, restart_harness])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "打开主界面", true, None::<&str>)?;
+            let restart = MenuItem::with_id(app, "restart", "重启 Harness 服务", true, None::<&str>)?;
             let logs = MenuItem::with_id(app, "logs", "打开日志目录", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "彻底退出", true, None::<&str>)?;
             let menu = MenuBuilder::new(app)
-                .items(&[&show, &logs, &quit])
+                .items(&[&show, &restart, &logs, &quit])
                 .build()?;
             let icon = app.default_window_icon().cloned().ok_or("未找到应用图标")?;
             TrayIconBuilder::new()
@@ -223,6 +231,14 @@ pub fn run() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "restart" => {
+                        let _ = app.emit("restart-harness", ());
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.unminimize();
