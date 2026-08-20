@@ -27,7 +27,8 @@
       "nsis": {
         "languages": ["SimpChinese"],
         "displayLanguageSelector": false,
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerHooks": "installer-hooks.nsh"
       }
     }
   }
