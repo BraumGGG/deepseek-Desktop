@@ -137,6 +137,17 @@ fn log_tail(path: &Path) -> String {
 fn stop_harness(state: &AppState) {
     if let Ok(mut guard) = state.harness.lock() {
         if let Some(mut child) = guard.take() {
+            #[cfg(target_os = "windows")]
+            {
+                let pid = child.id().to_string();
+                let mut taskkill = Command::new("taskkill");
+                taskkill
+                    .args(["/PID", &pid, "/T", "/F"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
+                taskkill.creation_flags(CREATE_NO_WINDOW);
+                let _ = taskkill.status();
+            }
             let _ = child.kill();
             let _ = child.wait();
         }
