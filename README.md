@@ -1,88 +1,60 @@
 # DeepSeek Harness 桌面版
 
-这是开源项目 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Windows 10/11 x64 独立桌面客户端。
+DeepSeek Harness 桌面版是一个适用于 Windows 10/11 x64 的独立桌面客户端。它将开源的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 集成到桌面窗口中，用户无需打开命令行或单独安装 Node.js。
 
-## 产品功能
+## 主要功能
 
-- 在独立桌面窗口中启动 DeepSeek Harness Web UI。
-- 内置便携版 Node.js，用户无需另外安装 Node.js。
-- Harness 服务仅监听本机地址 `127.0.0.1`，并自动选择可用端口。
-- 生成简体中文 NSIS 安装包。
-- 打包前执行真实冷启动验证，避免安装后缺少依赖或启动闪退。
-- 启动失败时记录退出码、错误信息和日志路径，便于排查问题。
+- 双击应用即可打开 DeepSeek Harness。
+- 在独立桌面窗口中使用 Web 界面。
+- 内置运行环境，无需额外安装 Node.js。
+- 自动选择本机可用端口，不影响其他程序。
+- 服务仅运行在本机，不默认暴露到局域网。
+- 支持 DeepSeek Harness 提供的智能体、文件操作、终端工具、技能和工作流能力。
 
-## 当前状态
+## 使用方法
 
-当前版本已经完成 Windows x64 安装包构建和安装后冷启动验证。
+1. 下载 Windows 安装包。
+2. 按安装向导完成安装。
+3. 从桌面或开始菜单启动 **DeepSeek Harness**。
+4. 按页面提示完成模型或 API 配置后即可使用。
 
-需要注意：DeepSeek Harness 官方仍处于开发者预览阶段，上游版本可能出现不兼容变更。本项目会固定经过验证的 Harness 版本，再生成桌面安装包。
+## 系统要求
 
-## 开发环境
+- Windows 10 或 Windows 11
+- 64 位系统
+- 建议保持系统 WebView2 运行时为最新版本
 
-要求：
+## 数据与隐私
 
-- Windows 10/11 x64
-- Node.js 22 或更高版本
-- 与项目锁定的 Tauri 依赖兼容的 Rust 工具链
-- pnpm 11 或更高版本
+- 客户端服务默认只监听本机地址 `127.0.0.1`。
+- 配置和运行日志保存在当前 Windows 用户的应用数据目录中。
+- 具体模型请求会按照你在 DeepSeek Harness 中配置的服务提供商执行。
 
-安装桌面端依赖并启动开发模式：
+## 日志与故障排查
 
-```powershell
-npm install
-npm run dev
-```
-
-## 发布构建
-
-发布流程不会把生成的运行时、依赖缓存或安装包提交到 Git 仓库：
-
-```powershell
-pnpm install
-pnpm run build:official
-pnpm --filter @deepseek-ai/dsh deploy --prod --legacy
-npm run release:runtime
-npm run verify:runtime
-npm run release:resources
-npx tauri build --bundles nsis
-```
-
-运行时 staging 步骤会完成以下工作：
-
-1. 计算 Harness 的生产依赖闭包。
-2. 将 workspace 依赖实体化，移除 pnpm 链接和循环目录。
-3. 排除测试文件、类型声明、开发文档和构建缓存。
-4. 使用内置 Node.js 启动 Harness 并检查本地端口。
-5. 验证通过后，才同步到 Tauri resources 并生成 NSIS 安装包。
-
-如果运行时缺少依赖、Node 提前退出或服务无法监听端口，构建流程会直接失败，不会生成未经验证的安装包。
-
-## 日志位置
-
-启动日志写入当前用户的应用数据目录：
+如果应用无法启动或意外退出，请查看以下日志文件：
 
 ```text
 %APPDATA%\ai.deepseek.harness.desktop\logs\harness.log
 ```
 
-具体路径以 Windows 当前用户环境为准。如果启动失败，请优先查看该日志文件。
+提交问题时，建议同时提供：
 
-## 项目结构
+- Windows 版本
+- 客户端版本
+- 复现步骤
+- 日志文件中的错误信息
 
-```text
-DeepSeek Harness Desktop/
-├─ src-tauri/                 Tauri 桌面壳和 Rust 启动器
-├─ ui/                        启动页面和前端健康检查
-├─ scripts/                   运行时构建、验证和发布脚本
-├─ docs/                      设计说明和实施计划
-├─ progress.md                项目进度记录
-└─ findings.md                构建和运行问题记录
-```
+请注意隐藏 API Key、密码和其他个人信息。
 
-生成的 `runtime/`、`release-staging/`、`src-tauri/resources/`、Rust `target/` 和安装包不会提交到 Git 仓库。
+## 更新说明
+
+DeepSeek Harness 官方仍处于开发者预览阶段，功能和配置可能持续变化。本桌面版会在经过验证后发布兼容的新版安装包。
 
 ## 开源许可
 
-DeepSeek Harness 是独立的开源项目，其源码、许可证、第三方声明和版本更新由上游项目维护。本仓库主要包含 Windows 桌面封装、启动器和发布工具。
+本项目是 DeepSeek Harness 的桌面封装。DeepSeek Harness 的源码、许可证和第三方依赖声明由上游项目维护，请同时遵守本项目及 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的相关许可条款。
 
-请同时遵守本项目和 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的许可证及第三方依赖声明。
+## 问题反馈
+
+请在本项目的 [Issues](https://github.com/BraumGGG/deepseek-Desktop/issues) 中提交问题或建议。
