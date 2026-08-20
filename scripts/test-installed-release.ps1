@@ -54,19 +54,55 @@ if (-not $alive) {
 }
 $null = $alive.CloseMainWindow()
 if (-not $alive.WaitForExit(5000)) {
-    Stop-Process -Id $alive.Id -Force
+    $taskkill = Start-Process -FilePath 'taskkill.exe' -ArgumentList @('/PID', $alive.Id, '/T', '/F') -Wait -PassThru -WindowStyle Hidden
+    if ($taskkill.ExitCode -ne 0) {
+        Stop-Process -Id $alive.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$installedFiles = Get-ChildItem -LiteralPath $installDir -Recurse -File
+$installedFileCount = $installedFiles.Count
+$installedBytes = ($installedFiles | Measure-Object -Property Length -Sum).Sum
+
+Start-Sleep -Seconds 2
+$residual = Get-CimInstance Win32_Process | Where-Object {
+    $_.ExecutablePath -like "$installDir*" -or $_.CommandLine -like "*$installDir*"
+}
+if ($residual) {
+    $details = ($residual | Select-Object ProcessId, Name, ExecutablePath, CommandLine | Out-String)
+    throw ("Installed process tree remains after exit: " + $details)
+}
+
+$uninstaller = Get-ChildItem -LiteralPath $installDir -Recurse -Filter 'unins*.exe' -File |
+    Select-Object -First 1
+if (-not $uninstaller) {
+    throw "Uninstaller not found in $installDir"
+}
+$uninstallProcess = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/S') -Wait -PassThru
+if ($uninstallProcess.ExitCode -ne 0) {
+    throw "Uninstaller failed with exit code $($uninstallProcess.ExitCode)"
+}
+Start-Sleep -Seconds 2
+if (Test-Path -LiteralPath $installDir) {
+    $remaining = Get-ChildItem -LiteralPath $installDir -Recurse -Force -ErrorAction SilentlyContinue
+    if ($remaining) {
+        throw "Uninstaller left files in project test directory: $installDir"
+    }
+    Remove-Item -LiteralPath $installDir -Force -ErrorAction SilentlyContinue
 }
 
 $installerInfo = Get-Item -LiteralPath $installer
 $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
-$installedFiles = Get-ChildItem -LiteralPath $installDir -Recurse -File
 [pscustomobject]@{
     Installer = $installerInfo.FullName
     InstallerBytes = $installerInfo.Length
     Sha256 = $hash
     InstallSeconds = [math]::Round($stopwatch.Elapsed.TotalSeconds, 2)
-    InstalledFiles = $installedFiles.Count
-    InstalledBytes = ($installedFiles | Measure-Object -Property Length -Sum).Sum
+    InstalledFiles = $installedFileCount
+    InstalledBytes = $installedBytes
     Application = $app.FullName
     DesktopAliveAfter12Seconds = [bool]$alive
+    Uninstaller = $uninstaller.FullName
+    UninstallExitCode = $uninstallProcess.ExitCode
+    InstallTestDirectoryRemoved = -not (Test-Path -LiteralPath $installDir)
 }
