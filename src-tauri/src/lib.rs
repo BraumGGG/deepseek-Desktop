@@ -1,6 +1,7 @@
 use std::{
     env,
     fs::{create_dir_all, read_to_string, OpenOptions},
+    io::Write,
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -80,6 +81,19 @@ fn resolve_resource(root: &Path, name: &str) -> PathBuf {
         .unwrap_or_else(|| root.join(name))
 }
 
+fn write_log_line(path: &Path, message: &str) {
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "[{}] {message}", chrono_like_timestamp());
+    }
+}
+
+fn chrono_like_timestamp() -> String {
+    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(now) => format!("unix:{}", now.as_secs()),
+        Err(_) => "unix:0".into(),
+    }
+}
+
 fn start_harness(
     app: &AppHandle,
     state: &State<AppState>,
@@ -102,9 +116,17 @@ fn start_harness(
     let log = OpenOptions::new()
         .create(true)
         .write(true)
-        .truncate(true)
+        .append(true)
         .open(&log_path)
         .map_err(|e| format!("无法创建日志文件: {e}"))?;
+    let _ = writeln!(
+        &log,
+        "[{}] desktop launch: port={port}, node={}, harness={}, cwd={}",
+        chrono_like_timestamp(),
+        node.display(),
+        entry.display(),
+        harness.display()
+    );
     let err_log = log
         .try_clone()
         .map_err(|e| format!("无法打开错误日志: {e}"))?;
@@ -125,6 +147,8 @@ fn start_harness(
     let child = command
         .spawn()
         .map_err(|e| format!("启动 Harness 失败: {e}"))?;
+    let pid = child.id();
+    write_log_line(&log_path, &format!("harness process spawned: pid={pid}"));
     *state.harness.lock().map_err(|_| "无法锁定服务状态")? = Some(child);
     Ok((format!("http://127.0.0.1:{port}"), log_path, port))
 }
@@ -188,11 +212,13 @@ fn boot_url(app: AppHandle, state: State<AppState>) -> Result<String, String> {
         )
         .is_ok()
         {
+            write_log_line(&log_path, &format!("harness ready: url={url}, pid={}", state.harness.lock().ok().and_then(|g| g.as_ref().map(|c| c.id())).unwrap_or_default()));
             return Ok(url);
         }
         thread::sleep(Duration::from_millis(200));
     }
     stop_harness(&state);
+    write_log_line(&log_path, "harness startup timeout; process tree terminated");
     Err(format!(
         "Harness 启动超时。日志：{}\n{}",
         log_path.display(),
