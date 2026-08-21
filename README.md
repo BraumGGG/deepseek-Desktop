@@ -51,6 +51,13 @@ DeepSeek Harness 桌面版是一个适用于 Windows 10/11 x64 的独立桌面�
 
 DeepSeek Harness 官方仍处于开发者预览阶段，功能和配置可能持续变化。本桌面版会在经过验证后发布兼容的新版安装包。
 
+桌面版当前采用手动更新方式：
+
+1. 右键系统托盘图标，选择“检查更新”。
+2. 在 GitHub Releases 页面下载最新 Windows 安装包。
+3. 直接运行新安装包覆盖安装，安装器会先关闭旧版本及其 Harness 子进程。
+4. 覆盖安装不会主动删除用户应用数据和日志。
+
 ## 开源许可
 
 本项目是 DeepSeek Harness 的桌面封装。DeepSeek Harness 的源码、许可证和第三方依赖声明由上游项目维护，请同时遵守本项目及 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的相关许可条款。

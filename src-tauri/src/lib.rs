@@ -308,10 +308,11 @@ pub fn run() {
             restore_window_state(&app.handle());
             let show = MenuItem::with_id(app, "show", "打开主界面", true, None::<&str>)?;
             let restart = MenuItem::with_id(app, "restart", "重启 Harness 服务", true, None::<&str>)?;
+            let update = MenuItem::with_id(app, "update", "检查更新", true, None::<&str>)?;
             let logs = MenuItem::with_id(app, "logs", "打开日志目录", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "彻底退出", true, None::<&str>)?;
             let menu = MenuBuilder::new(app)
-                .items(&[&show, &restart, &logs, &quit])
+                .items(&[&show, &restart, &update, &logs, &quit])
                 .build()?;
             let icon = app.default_window_icon().cloned().ok_or("未找到应用图标")?;
             TrayIconBuilder::new()
@@ -328,6 +329,16 @@ pub fn run() {
                     }
                     "restart" => {
                         restart_from_tray(app.clone());
+                    }
+                    "update" => {
+                        let mut command = Command::new("cmd");
+                        command
+                            .args(["/C", "start", "", "https://github.com/BraumGGG/deepseek-Desktop/releases/latest"])
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null());
+                        #[cfg(target_os = "windows")]
+                        command.creation_flags(CREATE_NO_WINDOW);
+                        let _ = command.spawn();
                     }
                     "logs" => {
                         if let Ok(path) = app.path().app_data_dir() {
