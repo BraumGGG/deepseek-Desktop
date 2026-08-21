@@ -2,6 +2,10 @@
 
 DeepSeek Harness 桌面版是一个适用于 Windows 10/11 x64 的独立桌面客户端。它将开源的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 集成到桌面窗口中，用户无需打开命令行或单独安装 Node.js。
 
+## 下载
+
+**[前往 Releases 下载最新版 Windows 安装包](https://github.com/BraumGGG/deepseek-Desktop/releases)**
+
 ## 主要功能
 
 - 双击应用即可打开 DeepSeek Harness。
@@ -13,7 +17,7 @@ DeepSeek Harness 桌面版是一个适用于 Windows 10/11 x64 的独立桌面�
 
 ## 使用方法
 
-1. 下载 Windows 安装包。
+1. 前往 [Releases](https://github.com/BraumGGG/deepseek-Desktop/releases) 下载最新版 Windows 安装包。
 2. 按安装向导完成安装。
 3. 从桌面或开始菜单启动 **DeepSeek Harness**。
 4. 按页面提示完成模型或 API 配置后即可使用。
