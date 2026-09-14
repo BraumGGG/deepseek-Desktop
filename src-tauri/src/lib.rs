@@ -178,6 +178,7 @@ fn start_harness(
     let mut child = command
         .spawn()
         .map_err(|e| format!("启动 Harness 失败: {e}"))?;
+    *state.launch_url.lock().map_err(|_| "无法锁定启动地址")? = None;
     if let Some(stdout) = child.stdout.take() {
         let capture_log = log_path.clone();
         let capture_state = state.launch_url.clone();
@@ -194,7 +195,6 @@ fn start_harness(
     }
     let pid = child.id();
     write_log_line(&log_path, &format!("harness process spawned: pid={pid}"));
-    *state.launch_url.lock().map_err(|_| "无法锁定启动地址")? = None;
     *state.harness.lock().map_err(|_| "无法锁定服务状态")? = Some(child);
     Ok((format!("http://127.0.0.1:{port}"), log_path, port))
 }
