@@ -2,9 +2,9 @@
 
 当前已验证的安装包：
 
-- 文件：src-tauri/target/release/bundle/nsis/DeepSeek Harness_0.1.1_x64-setup.exe
+- 文件：src-tauri/target/release/bundle/nsis/DeepSeek Harness_0.1.2_x64-setup.exe
 - 平台：Windows 10/11 x64
-- SHA256：825FA54452EE4786AC5B5CB5C7E2105BCB428ACFA0D8DE064E4600099597FB43
+- SHA256：4A667AF01316462B1011F250D4A6F14004CC6F94AB845B74F09D54BA05FE3C28
 - 功能：内置 Harness 0.1.5-rc.2，支持普通文件上传
 
 旧版哈希 DBB18EB4E1411A1DED0950402D2F00D43AB701038EA6A0F6529AD953AABC21EC 以及更早的安装包均已废弃，不应继续分发。
