@@ -1,6 +1,6 @@
 {
-  "baseRuntime": "harness-dist",
-  "knownGoodRuntime": "src-tauri/resources/harness-dist",
+  "baseRuntime": "latest-base",
+  "knownGoodRuntime": "latest-base",
   "output": "release-staging/harness-dist",
   "maxFiles": 20000,
   "excludeNames": [

@@ -1,4 +1,4 @@
-import { cp, lstat, mkdir, readFile, readdir, rm } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -108,6 +108,16 @@ async function inspectTree(root) {
   return { files, bytes };
 }
 
+async function patchRuntimeCompatibility() {
+  const webserver = join(outputModules, '@deepseek-ai', 'dsh-host-webserver', 'lib', 'index.js');
+  let source = await readFile(webserver, 'utf8');
+  const needle = 'const encoding = new Negotiator(req).encoding(["gzip", "identity"]);';
+  const replacement = 'let encoding = "identity"; try { encoding = new Negotiator(req).encoding(["gzip", "identity"]) ?? "identity"; } catch { /* malformed Accept-Encoding: serve identity */ }';
+  if (!source.includes(needle)) throw new Error(`未找到 dsh-host-webserver 压缩协商代码: ${webserver}`);
+  source = source.replace(needle, replacement);
+  await writeFile(webserver, source);
+}
+
 if (!output.startsWith(`${projectRoot}${sep}`)) {
   throw new Error(`拒绝写入项目路径外: ${output}`);
 }
@@ -121,6 +131,7 @@ await mkdir(outputModules, { recursive: true });
 const rootManifest = await readManifest(baseRuntime);
 const workspacePackages = await indexWorkspacePackages(upstreamSource);
 const packages = await buildClosure(rootManifest, workspacePackages);
+await patchRuntimeCompatibility();
 const metrics = await inspectTree(output);
 if (metrics.files > config.maxFiles) {
   throw new Error(`精简运行时仍有 ${metrics.files} 个文件，超过阈值 ${config.maxFiles}`);
