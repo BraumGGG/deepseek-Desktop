@@ -272,6 +272,9 @@ fn boot_url(app: AppHandle, state: State<AppState>) -> Result<String, String> {
             };
             let resolved_url = authenticated.clone().unwrap_or_else(|| url.clone());
             write_log_line(&log_path, &format!("harness ready: url={resolved_url}, pid={}", state.harness.lock().ok().and_then(|g| g.as_ref().map(|c| c.id())).unwrap_or_default()));
+            if let Some(mut window) = app.get_webview_window("main") {
+                let _ = window.navigate(Url::parse(&resolved_url).map_err(|e| format!("启动地址无效: {e}"))?);
+            }
             return Ok(resolved_url);
         }
         thread::sleep(Duration::from_millis(200));

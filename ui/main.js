@@ -8,8 +8,7 @@ async function boot() {
     return;
   }
   try {
-    const url = await invoke('boot_url');
-    window.location.replace(url);
+    await invoke('boot_url');
   } catch (error) {
     app.textContent = String(error);
   }
@@ -19,8 +18,7 @@ async function restart() {
   if (!invoke) return;
   app.textContent = '正在重启 Harness 服务…';
   try {
-    const url = await invoke('restart_harness');
-    window.location.replace(url);
+    await invoke('restart_harness');
   } catch (error) {
     app.textContent = 'Harness 重启失败：' + String(error);
   }
