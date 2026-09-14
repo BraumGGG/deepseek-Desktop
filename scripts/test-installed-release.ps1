@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$installer = Join-Path $projectRoot 'src-tauri\target\release\bundle\nsis\DeepSeek Harness_0.1.0_x64-setup.exe'
+$installer = Join-Path $projectRoot 'src-tauri\target\release\bundle\nsis\DeepSeek Harness_0.1.7_x64-setup.exe'
 $installDir = Join-Path $projectRoot 'install-test'
 $installDir = [System.IO.Path]::GetFullPath($installDir)
 
