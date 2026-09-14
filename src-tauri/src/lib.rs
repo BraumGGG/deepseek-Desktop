@@ -302,8 +302,18 @@ fn restart_from_tray(app: AppHandle) {
                 &format!("127.0.0.1:{port}").parse().unwrap(),
                 Duration::from_millis(300),
             ).is_ok() {
+                let token_deadline = Instant::now() + Duration::from_secs(5);
+                let resolved_url = loop {
+                    if let Some(value) = state.launch_url.lock().ok().and_then(|guard| guard.clone()) {
+                        break value;
+                    }
+                    if Instant::now() >= token_deadline {
+                        break url.clone();
+                    }
+                    thread::sleep(Duration::from_millis(50));
+                };
                 if let Some(mut window) = app.get_webview_window("main") {
-                    let _ = window.navigate(Url::parse(&url).unwrap());
+                    let _ = window.navigate(Url::parse(&resolved_url).unwrap());
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
