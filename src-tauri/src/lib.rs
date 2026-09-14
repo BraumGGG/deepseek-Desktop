@@ -1,12 +1,11 @@
 use std::{
     env,
     fs::{create_dir_all, read_to_string, OpenOptions},
-    io::Write,
+    io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    sync::atomic::{AtomicBool, Ordering},
-    sync::Mutex,
+    sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex},
     thread,
     time::{Duration, Instant},
 };
@@ -32,6 +31,7 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 struct AppState {
     harness: Mutex<Option<Child>>,
+    launch_url: Arc<Mutex<Option<String>>>,
     quitting: AtomicBool,
 }
 
@@ -170,16 +170,31 @@ fn start_harness(
         .arg(port.to_string())
         .env("DSH_DESKTOP", "1")
         .current_dir(harness)
-        .stdout(Stdio::from(log))
+        .stdout(Stdio::piped())
         .stderr(Stdio::from(err_log))
         .stdin(Stdio::null());
     #[cfg(target_os = "windows")]
     command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
-    let child = command
+    let mut child = command
         .spawn()
         .map_err(|e| format!("启动 Harness 失败: {e}"))?;
+    if let Some(stdout) = child.stdout.take() {
+        let capture_log = log_path.clone();
+        let capture_state = state.launch_url.clone();
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines().flatten() {
+                write_log_line(&capture_log, &line);
+                if let Some(url) = line.strip_prefix("dsh web: ").and_then(|value| value.split_whitespace().next()) {
+                    if let Ok(mut guard) = capture_state.lock() {
+                        *guard = Some(url.to_string());
+                    }
+                }
+            }
+        });
+    }
     let pid = child.id();
     write_log_line(&log_path, &format!("harness process spawned: pid={pid}"));
+    *state.launch_url.lock().map_err(|_| "无法锁定启动地址")? = None;
     *state.harness.lock().map_err(|_| "无法锁定服务状态")? = Some(child);
     Ok((format!("http://127.0.0.1:{port}"), log_path, port))
 }
@@ -243,8 +258,21 @@ fn boot_url(app: AppHandle, state: State<AppState>) -> Result<String, String> {
         )
         .is_ok()
         {
-            write_log_line(&log_path, &format!("harness ready: url={url}, pid={}", state.harness.lock().ok().and_then(|g| g.as_ref().map(|c| c.id())).unwrap_or_default()));
-            return Ok(url);
+            // BrowserAuth requires the tokenized URL. Give the stdout reader a short
+            // window to capture it after the HTTP listener starts accepting traffic.
+            let token_deadline = Instant::now() + Duration::from_secs(5);
+            let authenticated = loop {
+                if let Some(value) = state.launch_url.lock().ok().and_then(|guard| guard.clone()) {
+                    break Some(value);
+                }
+                if Instant::now() >= token_deadline {
+                    break None;
+                }
+                thread::sleep(Duration::from_millis(50));
+            };
+            let resolved_url = authenticated.clone().unwrap_or_else(|| url.clone());
+            write_log_line(&log_path, &format!("harness ready: url={resolved_url}, pid={}", state.harness.lock().ok().and_then(|g| g.as_ref().map(|c| c.id())).unwrap_or_default()));
+            return Ok(resolved_url);
         }
         thread::sleep(Duration::from_millis(200));
     }
@@ -301,6 +329,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
             harness: Mutex::new(None),
+            launch_url: Arc::new(Mutex::new(None)),
             quitting: AtomicBool::new(false),
         })
         .invoke_handler(tauri::generate_handler![boot_url, restart_harness])
